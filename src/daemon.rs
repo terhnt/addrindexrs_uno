@@ -1,5 +1,5 @@
 use base64;
-use bitcoin::blockdata::block::{Block, BlockHeader};
+use bitcoin::blockdata::block::{Block, BlockHeader, BlockHeaderAuxPow, BlockAuxPow};
 use bitcoin::blockdata::transaction::Transaction;
 use bitcoin::consensus::encode::deserialize;
 use bitcoin::network::constants::Network;
@@ -23,6 +23,11 @@ use crate::signal::Waiter;
 use crate::util::HeaderList;
 
 
+const DOGECOIN_AUXPOW_BLOCK_HEIGHT: usize = 371377;
+const UNOBTANIUM_AUXPOW_BLOCK_HEIGHT: usize = 600000;
+const UNOBTANIUM_TESTNET_AUXPOW_BLOCK_HEIGHT: usize = 500;
+
+
 fn parse_hash(value: &Value) -> Result<Sha256dHash> {
     Ok(Sha256dHash::from_hex(
         value
@@ -32,27 +37,49 @@ fn parse_hash(value: &Value) -> Result<Sha256dHash> {
     .chain_err(|| format!("non-hex value: {}", value))?)
 }
 
+fn header_aux_from_value(data: &[u8]) -> Result<BlockHeaderAuxPow> {
+    Ok(
+       deserialize(data)
+            .chain_err(|| format!("failed to parse header aux"))?,
+    )
+}
+
 fn header_from_value(value: Value) -> Result<BlockHeader> {
     let header_hex = value
         .as_str()
         .chain_err(|| format!("non-string header: {}", value))?;
     let header_bytes = hex::decode(header_hex).chain_err(|| "non-hex header")?;
-    Ok(
-        deserialize(&header_bytes)
-            .chain_err(|| format!("failed to parse header {}", header_hex))?,
-    )
+	
+	if (header_bytes.len() > 80){
+		Ok (
+			header_aux_from_value(&header_bytes).unwrap().block_header
+		)
+	} else {
+		Ok(
+		   deserialize(&header_bytes)
+				.chain_err(|| format!("failed to parse header {}", header_hex))?,
+		)
+	}
 }
 
 fn block_from_value(value: Value) -> Result<Block> {
     let block_hex = value.as_str().chain_err(|| "non-string block")?;
     let block_bytes = hex::decode(block_hex).chain_err(|| "non-hex block")?;
-    Ok(deserialize(&block_bytes).chain_err(|| format!("failed to parse block {}", block_hex))?)
+    
+	Ok(deserialize(&block_bytes).chain_err(|| format!("failed to parse block {}", block_hex))?)
+}
+
+fn block_aux_pow_from_value(value: Value) -> Result<BlockAuxPow> {
+    let block_hex = value.as_str().chain_err(|| "non-string block")?;
+    let block_bytes = hex::decode(block_hex).chain_err(|| "non-hex block")?;
+    
+	Ok(deserialize(&block_bytes).chain_err(|| format!("failed to parse block {}", block_hex))?)
 }
 
 fn tx_from_value(value: Value) -> Result<Transaction> {
     let tx_hex = value.as_str().chain_err(|| "non-string tx")?;
     let tx_bytes = hex::decode(tx_hex).chain_err(|| "non-hex tx")?;
-    Ok(deserialize(&tx_bytes).chain_err(|| format!("failed to parse tx {}", tx_hex))?)
+	Ok(deserialize(&tx_bytes).chain_err(|| format!("failed to parse tx {}", tx_hex))?)
 }
 
 /// Parse JSONRPC error code, if exists.
@@ -413,27 +440,34 @@ impl Daemon {
     }
 
     pub fn getbestblockhash(&self) -> Result<Sha256dHash> {
-        parse_hash(&self.request("getbestblockhash", json!([]))?).chain_err(|| "invalid blockhash")
+		/*Ok(Sha256dHash::from_hex(
+			&String::from("60323982f9c5ff1b5a954eac9dc1269352835f47c2c5222691d80f0d50dcf053")
+            //.chain_err(|| format!("non-string value: {}", ""))?,
+		)
+		.chain_err(|| format!("non-hex value: {}", ""))?)*/
+
+    	parse_hash(&self.request("getbestblockhash", json!([]))?).chain_err(|| "invalid blockhash")
     }
 
     pub fn getblockheader(&self, blockhash: &Sha256dHash) -> Result<BlockHeader> {
         header_from_value(self.request(
-            "getblockheader",
-            json!([blockhash.to_hex(), /*verbose=*/ false]),
-        )?)
+			"getblockheader",
+			json!([blockhash.to_hex(), /*verbose=*/ false]),
+		)?)		
     }
 
     pub fn getblockheaders(&self, heights: &[usize]) -> Result<Vec<BlockHeader>> {
         let heights: Vec<Value> = heights.iter().map(|height| json!([height])).collect();
-        let params_list: Vec<Value> = self
-            .requests("getblockhash", &heights)?
-            .into_iter()
-            .map(|hash| json!([hash, /*verbose=*/ false]))
-            .collect();
-        let mut result = vec![];
+		let params_list: Vec<Value> = self
+			.requests("getblockhash", &heights)?
+			.into_iter()
+			.map(|hash| json!([hash, /*verbose=*/ false]))
+			.collect();
+		let mut result = vec![];
         for h in self.requests("getblockheader", &params_list)? {
-            result.push(header_from_value(h)?);
-        }
+			result.push(header_from_value(h)?);
+		}
+		
         Ok(result)
     }
 
@@ -467,9 +501,24 @@ impl Daemon {
             .map(|hash| json!([hash.to_hex(), /*verbose=*/ false]))
             .collect();
         let values = self.requests("getblock", &params_list)?;
+        let valuesHeaders = self.requests("getblockheader", &params_list)?;
+		let mut headersIter = valuesHeaders.iter();
         let mut blocks = vec![];
-        for value in values {
-            blocks.push(block_from_value(value)?);
+		for value in values {
+			let headerValue = headersIter.next().unwrap();
+			let header_hex = headerValue.as_str().unwrap();
+            let header_bytes = hex::decode(header_hex).unwrap();
+	
+			if (header_bytes.len() > 80){
+				let blockAuxPow = block_aux_pow_from_value(value).unwrap();
+				let block = Block {
+					header: blockAuxPow.aux_pow_header.block_header,
+					txdata: blockAuxPow.txdata
+				};
+				blocks.push(block);
+			} else {
+				blocks.push(block_from_value(value)?);
+			}		
         }
         Ok(blocks)
     }
@@ -505,6 +554,10 @@ impl Daemon {
             .map(|txhash| json!([txhash.to_hex(), /*verbose=*/ false]))
             .collect();
 
+
+		for x in &params_list {
+			println!("Proxima tx {}", x);
+		}
         let values = self.requests("getrawtransaction", &params_list)?;
         let mut txs = vec![];
         for value in values {
@@ -568,15 +621,18 @@ impl Daemon {
         let mut new_headers = vec![];
         let null_hash = Sha256dHash::default();
         let mut blockhash = *bestblockhash;
-        while blockhash != null_hash {
-            if indexed_headers.header_by_blockhash(&blockhash).is_some() {
+        	
+		while blockhash != null_hash {
+        	if indexed_headers.header_by_blockhash(&blockhash).is_some() {
                 break;
             }
+            
+			debug!("Next blockhash {}",blockhash);
             let header = self
                 .getblockheader(&blockhash)
                 .chain_err(|| format!("failed to get {} header", blockhash))?;
-            new_headers.push(header);
-            blockhash = header.prev_blockhash;
+			new_headers.push(header);
+			blockhash = header.prev_blockhash;
         }
         trace!("downloaded {} block headers", new_headers.len());
         new_headers.reverse(); // so the tip is the last vector entry
