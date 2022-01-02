@@ -49,7 +49,7 @@ fn header_from_value(value: Value) -> Result<BlockHeader> {
         .as_str()
         .chain_err(|| format!("non-string header: {}", value))?;
     let header_bytes = hex::decode(header_hex).chain_err(|| "non-hex header")?;
-	
+
 	if (header_bytes.len() > 80){
 		Ok (
 			header_aux_from_value(&header_bytes).unwrap().block_header
@@ -65,14 +65,14 @@ fn header_from_value(value: Value) -> Result<BlockHeader> {
 fn block_from_value(value: Value) -> Result<Block> {
     let block_hex = value.as_str().chain_err(|| "non-string block")?;
     let block_bytes = hex::decode(block_hex).chain_err(|| "non-hex block")?;
-    
+
 	Ok(deserialize(&block_bytes).chain_err(|| format!("failed to parse block {}", block_hex))?)
 }
 
 fn block_aux_pow_from_value(value: Value) -> Result<BlockAuxPow> {
     let block_hex = value.as_str().chain_err(|| "non-string block")?;
     let block_bytes = hex::decode(block_hex).chain_err(|| "non-hex block")?;
-    
+
 	Ok(deserialize(&block_bytes).chain_err(|| format!("failed to parse block {}", block_hex))?)
 }
 
@@ -321,9 +321,9 @@ impl Daemon {
 
         let network_info = daemon.getnetworkinfo()?;
         info!("{:?}", network_info);
-        if network_info.version < 16_00_00 {
+        if network_info.version < 11_00_00 {
             bail!(
-                "{} is not supported - please use bitcoind 0.16+",
+                "{} is not supported - please use unobtaniumd 0.11.0+",
                 network_info.subversion,
             )
         }
@@ -331,14 +331,14 @@ impl Daemon {
         let blockchain_info = daemon.getblockchaininfo()?;
         info!("{:?}", blockchain_info);
         if blockchain_info.pruned {
-            bail!("pruned node is not supported (use '-prune=0' bitcoind flag)".to_owned())
+            bail!("pruned node is not supported (use '-prune=0' unobtaniumd flag)".to_owned())
         }
 
         loop {
             if !daemon.getblockchaininfo()?.initialblockdownload {
                 break;
             }
-            warn!("wait until bitcoind is synced (i.e. initialblockdownload = false)");
+            warn!("wait until unobtaniumd is synced (i.e. initialblockdownload = false)");
             signal.wait(Duration::from_secs(10))?;
         }
         Ok(daemon)
@@ -402,7 +402,7 @@ impl Daemon {
         loop {
             match self.handle_request_batch(method, params_list) {
                 Err(Error(ErrorKind::Connection(msg), _)) => {
-                    warn!("reconnecting to bitcoind: {}", msg);
+                    warn!("reconnecting to unobtaniumd: {}", msg);
                     self.signal.wait(Duration::from_secs(3))?;
                     let mut conn = self.conn.lock().unwrap();
                     *conn = conn.reconnect()?;
@@ -423,7 +423,7 @@ impl Daemon {
         self.retry_request_batch(method, params_list)
     }
 
-    // bitcoind JSONRPC API:
+    // unobtaniumd JSONRPC API:
 
     fn getblockchaininfo(&self) -> Result<BlockchainInfo> {
         let info: Value = self.request("getblockchaininfo", json!([]))?;
@@ -453,7 +453,7 @@ impl Daemon {
         header_from_value(self.request(
 			"getblockheader",
 			json!([blockhash.to_hex(), /*verbose=*/ false]),
-		)?)		
+		)?)
     }
 
     pub fn getblockheaders(&self, heights: &[usize]) -> Result<Vec<BlockHeader>> {
@@ -467,7 +467,7 @@ impl Daemon {
         for h in self.requests("getblockheader", &params_list)? {
 			result.push(header_from_value(h)?);
 		}
-		
+
         Ok(result)
     }
 
@@ -508,7 +508,7 @@ impl Daemon {
 			let headerValue = headersIter.next().unwrap();
 			let header_hex = headerValue.as_str().unwrap();
             let header_bytes = hex::decode(header_hex).unwrap();
-	
+
 			if (header_bytes.len() > 80){
 				let blockAuxPow = block_aux_pow_from_value(value).unwrap();
 				let block = Block {
@@ -518,7 +518,7 @@ impl Daemon {
 				blocks.push(block);
 			} else {
 				blocks.push(block_from_value(value)?);
-			}		
+			}
         }
         Ok(blocks)
     }
@@ -621,12 +621,12 @@ impl Daemon {
         let mut new_headers = vec![];
         let null_hash = Sha256dHash::default();
         let mut blockhash = *bestblockhash;
-        	
+
 		while blockhash != null_hash {
         	if indexed_headers.header_by_blockhash(&blockhash).is_some() {
                 break;
             }
-            
+
 			debug!("Next blockhash {}",blockhash);
             let header = self
                 .getblockheader(&blockhash)

@@ -99,7 +99,7 @@ Initial release
 * Prefix Prometheus metrics with 'electrs_'
 * Update RocksDB crate to 0.12.1
 * Update Bitcoin crate to 0.18
-* Support latest bitcoind mempool entry vsize field name
+* Support latest unobtaniumd mempool entry vsize field name
 * Fix "chain-trimming" reorgs
 * Serve by default on IPv4 localhost
 
@@ -141,14 +141,14 @@ Initial release
 
 ## 0.3.1 (20 Aug 2018)
 
-* Reconnect to bitcoind only on transient errors
+* Reconnect to unobtaniumd only on transient errors
 * Poll mempool after transaction broadcasting
 
 ## 0.3.0 (14 Aug 2018)
 
 * Optimize for low-memory systems
 * Improve compaction performance
-* Handle disconnections from bitcoind by retrying
+* Handle disconnections from unobtaniumd by retrying
 * Make `blk*.dat` ingestion more robust
 * Support regtest network
 * Support more Electrum RPC methods
@@ -159,7 +159,7 @@ Initial release
 
 ## 0.2.0 (14 Jul 2018)
 
-* Allow specifying custom bitcoind data directory
+* Allow specifying custom unobtaniumd data directory
 * Allow specifying JSONRPC cookie from commandline
 * Improve initial bulk indexing performance
 * Support 32-bit systems

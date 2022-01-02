@@ -276,7 +276,7 @@ impl Config {
 }
 
 //
-// Auth cookie for bitcoind
+// Auth cookie for unobtaniumd
 //
 struct StaticCookie {
     value: Vec<u8>,

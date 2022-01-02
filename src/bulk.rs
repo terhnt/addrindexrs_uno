@@ -210,7 +210,7 @@ fn start_indexer(
 }
 
 //
-// Index block files of bitcoind
+// Index block files of unobtaniumd
 //
 pub fn index_blk_files(
     daemon: &Daemon,
