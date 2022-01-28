@@ -19,16 +19,16 @@ $ cargo build --release
 ```
 
 
-## Bitcoind configuration
+## Unobtaniumd configuration
 
 Allow Bitcoin daemon to sync before starting the indexer. The indexer requires that bitcoin daemon isn't pruned and maintains a txindex.
 
 ```bash
-$ bitcoind -server=1 -txindex=1 -prune=0
+$ unobtaniumd -server=1 -txindex=1 -prune=0
 ```
 
 If you are using `-rpcuser=USER` and `-rpcpassword=PASSWORD` for authentication, please use `cookie="USER:PASSWORD"` option in one of the config files.
-Otherwise, [`~/.unobtanium/.cookie`](https://github.com/bitcoin/bitcoin/blob/0212187fc624ea4a02fc99bc57ebd413499a9ee1/contrib/debian/examples/bitcoin.conf#L70-L72) will be read, allowing this server to use bitcoind JSONRPC interface.
+Otherwise, [`~/.unobtanium/.cookie`](https://github.com/bitcoin/bitcoin/blob/0212187fc624ea4a02fc99bc57ebd413499a9ee1/contrib/debian/examples/bitcoin.conf#L70-L72) will be read, allowing this server to use unobtaniumd JSONRPC interface.
 
 ## Usage
 
