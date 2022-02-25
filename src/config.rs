@@ -195,9 +195,9 @@ impl Config {
         };
 
         let default_indexer_port = match config.network {
-            Network::Bitcoin => 50001,
-            Network::Testnet => 60001,
-            Network::Regtest => 60401,
+            Network::Bitcoin => 50021,
+            Network::Testnet => 60021,
+            Network::Regtest => 60421,
         };
 
         let daemon_rpc_addr: SocketAddr = config.daemon_rpc_addr.map_or(
