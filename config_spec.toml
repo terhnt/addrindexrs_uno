@@ -1,5 +1,5 @@
 [general]
-env_prefix = "ADDRINDEXRS"
+env_prefix = "ADDRINDEXRS_UNO"
 conf_file_param = "conf"
 conf_dir_param = "conf_dir"
 doc = """

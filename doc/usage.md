@@ -13,8 +13,8 @@ $ sudo apt install clang cmake  # for building 'rust-rocksdb'
 
 First build should take ~20 minutes:
 ```bash
-$ git clone https://github.com/terhnt/addrindexrs
-$ cd addrindexrs
+$ git clone https://github.com/terhnt/addrindexrs_uno
+$ cd addrindexrs_uno
 $ cargo build --release
 ```
 
@@ -61,7 +61,7 @@ You can specify options via command-line parameters, environment variables or us
 
 Note that the final DB size should be ~20% of the `blk*.dat` files, but it may increase to ~35% at the end of the inital sync (just before the [full compaction is invoked](https://github.com/facebook/rocksdb/wiki/Manual-Compaction)).
 
-If initial sync fails due to `memory allocation of xxxxxxxx bytes failedAborted` errors, as may happen on devices with limited RAM, try the following arguments when starting `addrindexrs`. It should take roughly 18 hours to sync and compact the index on an ODROID-HC1 with 8 CPU cores @ 2GHz, 2GB RAM, and an SSD using the following command:
+If initial sync fails due to `memory allocation of xxxxxxxx bytes failedAborted` errors, as may happen on devices with limited RAM, try the following arguments when starting `addrindexrs_uno`. It should take roughly 18 hours to sync and compact the index on an ODROID-HC1 with 8 CPU cores @ 2GHz, 2GB RAM, and an SSD using the following command:
 
 ```bash
 $ cargo run --release -- -vvvv --index-batch-size=10 --jsonrpc-import --db-dir ./db --indexer-rpc-addr="127.0.0.1:50021"
@@ -75,11 +75,11 @@ $ du db/
 
 ## Configuration files and environment variables
 
-The config files must be in the Toml format. These config files are (from lowest priority to highest): `/etc/addrindexrs/config.toml`, `~/.addrindexrs/config.toml`, `./addrindexrs.toml`.
+The config files must be in the Toml format. These config files are (from lowest priority to highest): `/etc/addrindexrs_uno/config.toml`, `~/.addrindexrs_uno/config.toml`, `./addrindexrs_uno.toml`.
 
 The options in highest-priority config files override options set in lowest-priority config files. Environment variables override options in config files and finally arguments override everythig else.
 
-For each argument an environment variable of the same name with `ADDRINDEXRS_` prefix, upper case letters and underscores instead of hypens exists (e.g. you can use `ADDRINDEXRS_INDEXER_RPC_ADDR` instead of `--indexer-rpc-addr`). Similarly, for each argument an option in config file exists with underscores instead o hypens (e.g. `indexer_rpc_addr`).
+For each argument an environment variable of the same name with `ADDRINDEXRS_UNO_` prefix, upper case letters and underscores instead of hypens exists (e.g. you can use `ADDRINDEXRS_UNO_INDEXER_RPC_ADDR` instead of `--indexer-rpc-addr`). Similarly, for each argument an option in config file exists with underscores instead o hypens (e.g. `indexer_rpc_addr`).
 
 Finally, you need to use a number in config file if you want to increase verbosity (e.g. `verbose = 3` is equivalent to `-vvv`) and `true` value in case of flags (e.g. `timestamp = true`)
 
@@ -90,13 +90,13 @@ In order to use a secure connection, you can also use [NGINX as an SSL endpoint]
 
 ```nginx
 stream {
-        upstream addrindexrs {
+        upstream addrindexrs_uno {
                 server 127.0.0.1:50021;
         }
 
         server {
                 listen 50002 ssl;
-                proxy_pass addrindexrs;
+                proxy_pass addrindexrs_uno;
 
                 ssl_certificate /path/to/example.crt;
                 ssl_certificate_key /path/to/example.key;
@@ -151,16 +151,16 @@ For more details, see http://docs.electrum.org/en/latest/tor.html.
 
 ### Sample Systemd Unit File
 
-You may wish to have systemd manage addrindexrs so that it's "always on." Here is a sample unit file (which assumes that the unobtaniumd unit file is `unobtaniumd.service`):
+You may wish to have systemd manage addrindexrs_uno so that it's "always on." Here is a sample unit file (which assumes that the unobtaniumd unit file is `unobtaniumd.service`):
 
 ```
 [Unit]
-Description=addrindexrs
+Description=addrindexrs_uno
 After=unobtaniumd.service
 
 [Service]
-WorkingDirectory=/home/unobtanium/addrindexrs
-ExecStart=/home/unobtanium/addrindexrs/target/release/addrindexrs --db-dir ./db --indexer-rpc-addr="127.0.0.1:50021"
+WorkingDirectory=/home/unobtanium/addrindexrs_uno
+ExecStart=/home/unobtanium/addrindexrs_uno/target/release/addrindexrs_uno --db-dir ./db --indexer-rpc-addr="127.0.0.1:50021"
 User=unobtanium
 Group=unobtanium
 Type=simple
